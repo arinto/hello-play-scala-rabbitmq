@@ -1,6 +1,6 @@
 import play.api.mvc._
 import play.api._
-import rabbitmq.Sender
+import utils.Sender
 
 object Global extends GlobalSettings {
   

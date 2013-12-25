@@ -1,4 +1,4 @@
-package rabbitmq
+package actors
 
 import com.rabbitmq.client.Channel
 import play.api.Logger

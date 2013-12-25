@@ -1,4 +1,4 @@
-package rabbitmq
+package actors
 
 import akka.actor.Actor
 import com.rabbitmq.client.QueueingConsumer
