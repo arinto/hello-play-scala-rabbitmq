@@ -17,41 +17,50 @@ import actors.PublishingActor
 import queue.RabbitMQConnection
 
 object Sender { 
-
+  
+  val connection = RabbitMQConnection.getConnection;
+  val sendingChannel1 = connection.createChannel();
+  val listenChannel1 = connection.createChannel();
+  val listenChannel2 = connection.createChannel();
+  val sendingChannel2 = connection.createChannel();
+  val listenChannel3 = connection.createChannel();
+  val listenChannel4 = connection.createChannel();
+  
+  val channels = Set(sendingChannel1, sendingChannel2, listenChannel1, listenChannel2, listenChannel3, listenChannel4)
+  
   def startSending() = {
-    val connection = RabbitMQConnection.getConnection;
-    val sendingChannel = connection.createChannel();
-
-    sendingChannel.queueDeclare(Config.RABBITMQ_QUEUE, false, false, false, null);
+    sendingChannel1.queueDeclare(Config.RABBITMQ_QUEUE, false, false, false, null);
     
     Akka.system.scheduler.schedule(FiniteDuration(2, TimeUnit.SECONDS)
         , FiniteDuration(1, TimeUnit.SECONDS)
         , Akka.system.actorOf(
-            Props(new SendingActor(channel = sendingChannel, queue = Config.RABBITMQ_QUEUE)))
+            Props(new SendingActor(channel = sendingChannel1, queue = Config.RABBITMQ_QUEUE)))
         ,"MSG to Queue");
     
     val callback1 = (x: String) => Logger.info("Received on queue callback 1: " + x);
-    setupListener(connection.createChannel(), Config.RABBITMQ_QUEUE, callback1);
+    setupListener(listenChannel1, Config.RABBITMQ_QUEUE, callback1);
     
     val callback2 = (x: String) => Logger.info("Received on queue callback 2: " + x);
-    setupListener(connection.createChannel(), Config.RABBITMQ_QUEUE, callback2);
+    setupListener(listenChannel2, Config.RABBITMQ_QUEUE, callback2);
 
-    val sendingChannel2 = connection.createChannel();
     sendingChannel2.exchangeDeclare(Config.RABBITMQ_EXCHANGEE, "fanout");
     
     val callback3 = (x: String) => Logger.info("Received on exchange callback 3: " + x);
-    val listenChannel3 = connection.createChannel();
     setupListener(listenChannel3, listenChannel3.queueDeclare().getQueue(), Config.RABBITMQ_EXCHANGEE, callback3);
     
     val callback4 = (x: String) => Logger.info("Received on exchange callback 4: " + x);
-    val listenChannel4 = connection.createChannel();
     setupListener(listenChannel4, listenChannel4.queueDeclare().getQueue(), Config.RABBITMQ_EXCHANGEE, callback4);
     
     Akka.system.scheduler.schedule(FiniteDuration(2, TimeUnit.SECONDS)
         , FiniteDuration(2, TimeUnit.SECONDS)
         , Akka.system.actorOf(
-            Props(new PublishingActor(channel = sendingChannel, exchange = Config.RABBITMQ_EXCHANGEE)))
+            Props(new PublishingActor(channel = sendingChannel1, exchange = Config.RABBITMQ_EXCHANGEE)))
         ,"MSG to Exchange");
+  }
+  
+  def stopEverything() = {
+    channels.foreach(channel => channel.close())
+    connection.close()
   }
   
   private def setupListener(receivingChannel: Channel, queue: String, f: (String) => Any){

@@ -7,4 +7,9 @@ object Global extends GlobalSettings {
   override def onStart(app: Application){
     Sender.startSending
   }
+  
+  override def onStop(app: Application){
+    Sender.stopEverything
+  }
+  
  }
